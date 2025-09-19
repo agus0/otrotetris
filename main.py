@@ -17,6 +17,20 @@ pygame.init()
 screen = pygame.display.set_mode(SCREEN_RESOLUTION)
 clock = pygame.time.Clock()
 
+# Set window title and icon
+base_title = "otrotetris (agus0's fork)"
+if CHEAT_MODE:
+    pygame.display.set_caption(f"{base_title} [CHEAT ON]")
+else:
+    pygame.display.set_caption(base_title)
+
+# Set window icon
+try:
+    icon = pygame.image.load('Tetris.ico')
+    pygame.display.set_icon(icon)
+except pygame.error:
+    print("Warning: Tetris.ico not found")
+
 Grid = World()
 
 # Timer event
