@@ -57,8 +57,8 @@ def game_loop_scene() -> None:
                         pygame.mixer.music.pause()
                         Grid.sound_on = False
                     else:
-                        pygame.mixer.music.unpause()
                         Grid.sound_on = True
+                        pygame.mixer.music.play(-1)  # Inicia la música si no estaba sonando
                 if event.key == pygame.K_c:
                     Grid.color_mode = not Grid.color_mode
                 if event.key == pygame.K_p:
