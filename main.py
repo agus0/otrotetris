@@ -4,8 +4,10 @@ from typing import NoReturn
 from constants import *
 from assets import *
 
-# Check for cheat mode in command line arguments
+# Check command line arguments
 CHEAT_MODE = "--cheaton" in sys.argv
+SOUND_ENABLED = "--sound" in sys.argv
+COLOR_ENABLED = "--color" in sys.argv
 
 def end_game() -> NoReturn:
     pygame.mixer.quit()
@@ -45,8 +47,11 @@ timer_event = pygame.USEREVENT + 1
 pygame.time.set_timer(timer_event, current_time_delay)
 pygame.mixer.init()
 pygame.mixer.music.load('tetris.mp3')
-# Música apagada por defecto
-Grid.sound_on = False
+# Inicializar estados según parámetros de línea de comando
+Grid.sound_on = SOUND_ENABLED
+Grid.color_mode = COLOR_ENABLED
+if SOUND_ENABLED:
+    pygame.mixer.music.play(-1)
 
 def game_loop_scene() -> None:
     # Gameloop
