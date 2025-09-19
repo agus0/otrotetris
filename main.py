@@ -55,7 +55,7 @@ if SOUND_ENABLED:
 
 def game_loop_scene() -> None:
     # Gameloop
-    move_repeat_delay = 200  # Sensibilidad, cuanto mayor mas lento se mueve
+    move_repeat_delay = 50  # Sensibilidad reducida para movimientos más rápidos
     last_move_time = 0
     game_pause = False
 
@@ -110,7 +110,8 @@ def game_loop_scene() -> None:
                     Grid.move(-1,0)
                     last_move_time = pygame.time.get_ticks()
                 if event.key == pygame.K_DOWN and can_move:
-                    Grid.move(0,1)  # Movimiento directo hacia abajo en modo cheat
+                    Grid.move(0,1)
+                    last_move_time = pygame.time.get_ticks()  # Actualizar el tiempo del último movimiento
                 if event.key == pygame.K_SPACE or event.key == pygame.K_UP:
                     if can_move:
                         Grid.rotate()
@@ -131,16 +132,19 @@ def game_loop_scene() -> None:
 
         # Manejo de movimiento continuo
         can_move = not game_pause or (game_pause and CHEAT_MODE)
-        if pygame.key.get_pressed()[pygame.K_LEFT] and can_move:
-            current_time = pygame.time.get_ticks()
-            if current_time - last_move_time >= move_repeat_delay:
+        current_time = pygame.time.get_ticks()
+        if current_time - last_move_time >= move_repeat_delay:
+            if pygame.key.get_pressed()[pygame.K_LEFT] and can_move:
                 Grid.move(-1, 0)
                 last_move_time = current_time
-        if pygame.key.get_pressed()[pygame.K_RIGHT] and can_move:
-            current_time = pygame.time.get_ticks()
-            if current_time - last_move_time >= move_repeat_delay:
+            if pygame.key.get_pressed()[pygame.K_RIGHT] and can_move:
                 Grid.move(1, 0)
                 last_move_time = current_time
+            if pygame.key.get_pressed()[pygame.K_DOWN] and can_move:
+                Grid.move(0, 1)
+                last_move_time = current_time
+                # Velocidad muy rápida mientras se mantiene presionada la tecla abajo
+                current_time_delay = 25  # Reducido a la mitad (25ms) para una caída más rápida
                 
         #Creacion de figuras
         Grid.draw(screen)
