@@ -16,9 +16,10 @@ clock = pygame.time.Clock()
 Grid = World()
 
 # Timer event
-time_delay = 500 # velocidad de caida
+base_time_delay = 500 # velocidad de caida inicial
+current_time_delay = base_time_delay
 timer_event = pygame.USEREVENT + 1
-pygame.time.set_timer(timer_event, time_delay)
+pygame.time.set_timer(timer_event, current_time_delay)
 pygame.mixer.init()
 pygame.mixer.music.load('tetris.mp3')
 pygame.mixer.music.play(-1) # -1 for infinite loop play
@@ -35,15 +36,40 @@ def game_loop_scene() -> None:
 
         # Events
         for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN:
+            if event.type == pygame.QUIT:  # Window close button
+                end_game()
+            elif event.type == pygame.WINDOWFOCUSLOST:  # Window minimized or lost focus
+                game_pause = True
+                pygame.mixer.music.pause()
+            elif event.type == pygame.WINDOWFOCUSGAINED:  # Window restored or gained focus
+                game_pause = False
+                pygame.mixer.music.unpause()
+            elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_q:
                     end_game()
+                if event.key == pygame.K_s:
+                    if pygame.mixer.music.get_busy():
+                        pygame.mixer.music.pause()
+                        Grid.sound_on = False
+                    else:
+                        pygame.mixer.music.unpause()
+                        Grid.sound_on = True
+                if event.key == pygame.K_c:
+                    Grid.color_mode = not Grid.color_mode
                 if event.key == pygame.K_p:
                     game_pause = not game_pause
                     if game_pause:
                         pygame.mixer.music.pause()
                     else:
                         pygame.mixer.music.unpause()
+                if event.key == pygame.K_PLUS or event.key == pygame.K_KP_PLUS:
+                    Grid.level = min(Grid.level + 1, 30)  # Limitamos a nivel 15
+                    current_time_delay = Grid.update_game_speed()
+                    pygame.time.set_timer(timer_event, current_time_delay)
+                if event.key == pygame.K_MINUS or event.key == pygame.K_KP_MINUS:
+                    Grid.level = max(Grid.level - 1, 1)  # No permite bajar de nivel 1
+                    current_time_delay = Grid.update_game_speed()
+                    pygame.time.set_timer(timer_event, current_time_delay)
                 if event.key == pygame.K_RIGHT:
                     if (not game_pause):
                         Grid.move(1,0)
@@ -60,7 +86,8 @@ def game_loop_scene() -> None:
                         Grid.rotate()
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_DOWN:
-                    pygame.time.set_timer(timer_event, time_delay)
+                    current_time_delay = Grid.update_game_speed()
+                    pygame.time.set_timer(timer_event, current_time_delay)
             elif event.type == timer_event:
                 if (not game_pause):
                     Grid.move(0,1)
@@ -102,11 +129,14 @@ def end_scene() -> None:
 
         #Events
         for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN:
+            if event.type == pygame.QUIT:  # Window close button
+                end_game()
+            elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_q:
                     end_game()
                 if event.key == pygame.K_SPACE:
-                    pygame.time.set_timer(timer_event, time_delay)
+                    current_time_delay = Grid.update_game_speed()
+                    pygame.time.set_timer(timer_event, current_time_delay)
                     pygame.mixer.music.play(-1) 
                     restart = True
         

@@ -1,4 +1,4 @@
-SCREEN_RESOLUTION = (600, 720)
+SCREEN_RESOLUTION = (800, 720)  # Made wider to accommodate text
 FPS = 30
 LIGHT_BLACK = (64, 64, 64)
 
