@@ -14,6 +14,11 @@ def end_game() -> NoReturn:
 
 # Init
 pygame.init()
+# Set window attributes for Windows taskbar icon
+if sys.platform == 'win32':  # Solo en Windows
+    import ctypes
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('agus0.otrotetris.1.0')
+
 screen = pygame.display.set_mode(SCREEN_RESOLUTION)
 clock = pygame.time.Clock()
 
