@@ -84,6 +84,32 @@ class World:
         speed = int(base_speed * (0.9 ** (self.level - 1)))
         return max(speed, 100)  # Don't go faster than 100ms
 
+    def change_piece(self, direction: int = 1) -> None:
+        before_state = self.block
+        before_color = self.block_color
+        
+        # Find current piece index by color instead of shape
+        current_piece = None
+        for i, piece in enumerate(block_list):
+            if piece.color == self.block_color:
+                current_piece = i
+                break
+        
+        # Si no encontramos por color, usamos el primer índice
+        if current_piece is None:
+            current_piece = 0
+            
+        # Calculate next index based on direction (1 for forward, -1 for backward)
+        next_index = (current_piece + direction) % len(block_list)
+        new_piece = block_list[next_index]
+        
+        # Try to change to new piece
+        self.block = [list(row) for row in new_piece.shape]  # Crear una nueva copia de la forma
+        self.block_color = new_piece.color
+        if self.collision():
+            self.block = before_state
+            self.block_color = before_color
+
     def rotate(self) -> None:
         before_state = self.block
         self.block = list(zip(*self.block[::-1]))  # Rotar la pieza
