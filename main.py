@@ -16,6 +16,23 @@ def end_game() -> NoReturn:
 
 # Init
 pygame.init()
+# Initialize joystick support (Xbox controllers etc.)
+pygame.joystick.init()
+joystick = None
+JOYSTICK_ENABLED = False
+# Deadzone for analog stick to avoid drift
+AXIS_DEADZONE = 0.5
+# Common Xbox mapping in pygame: A=0, B=1 (may vary by driver)
+JOY_A_BUTTON = 0
+JOY_B_BUTTON = 1
+if pygame.joystick.get_count() > 0:
+    joystick = pygame.joystick.Joystick(0)
+    joystick.init()
+    JOYSTICK_ENABLED = True
+    try:
+        print(f"Joystick detected: {joystick.get_name()}")
+    except Exception:
+        pass
 # Set window attributes for Windows taskbar icon
 if sys.platform == 'win32':  # Solo en Windows
     import ctypes
@@ -55,10 +72,16 @@ if SOUND_ENABLED:
 
 def game_loop_scene() -> None:
     # Gameloop
+    global current_time_delay
     lateral_move_delay = 150  # Delay para movimiento lateral (más lento para mejor control)
     down_move_delay = 25     # Delay para movimiento hacia abajo (muy rápido)
     last_move_time = 0
     game_pause = False
+    # Joystick state helpers
+    prev_hat = (0, 0)
+    prev_axis_y = 0.0
+    joystick_down_pressed = False  # From B button
+    prev_down_active = False
 
     while not Grid.end:
         clock.tick(FPS)
@@ -127,6 +150,24 @@ def game_loop_scene() -> None:
                 if event.key == pygame.K_DOWN and not game_pause:  # Solo restaurar el timer si no está en pausa
                     current_time_delay = Grid.update_game_speed()
                     pygame.time.set_timer(timer_event, current_time_delay)
+            # Joystick button events: A -> rotate, B -> soft-drop (hold)
+            elif event.type == pygame.JOYBUTTONDOWN:
+                # Map A -> rotate
+                if event.button == JOY_A_BUTTON:
+                    if not game_pause:
+                        Grid.rotate()
+                # Map B -> start soft-drop
+                if event.button == JOY_B_BUTTON:
+                    if not game_pause:
+                        joystick_down_pressed = True
+                        last_move_time = pygame.time.get_ticks()
+            elif event.type == pygame.JOYBUTTONUP:
+                if event.button == JOY_B_BUTTON:
+                    joystick_down_pressed = False
+                    # restore timer when releasing B
+                    if not game_pause:
+                        current_time_delay = Grid.update_game_speed()
+                        pygame.time.set_timer(timer_event, current_time_delay)
             elif event.type == timer_event:
                 if not game_pause:  # La pieza solo baja automáticamente cuando no está en pausa
                     Grid.move(0,1)
@@ -152,6 +193,57 @@ def game_loop_scene() -> None:
                 # Velocidad muy rápida para la caída automática mientras se presiona abajo
                 current_time_delay = 25
                 
+        # --- Joystick polling (D-pad / left stick) ---
+        if JOYSTICK_ENABLED and joystick is not None:
+            # Read hat (D-pad) and axes (left stick)
+            try:
+                hat = joystick.get_hat(0)
+            except Exception:
+                hat = (0, 0)
+            # Left stick (axes 0,1) and right stick (commonly axes 2,3) support
+            left_x = joystick.get_axis(0) if joystick.get_numaxes() > 0 else 0.0
+            left_y = joystick.get_axis(1) if joystick.get_numaxes() > 1 else 0.0
+            right_x = joystick.get_axis(2) if joystick.get_numaxes() > 2 else 0.0
+            right_y = joystick.get_axis(3) if joystick.get_numaxes() > 3 else 0.0
+            # Combine axes so either stick can be used equivalently
+            # Horizontal: prefer stronger input between sticks
+            axis_x = left_x if abs(left_x) >= abs(right_x) else right_x
+            # Vertical: prefer stronger input between sticks
+            axis_y = left_y if abs(left_y) >= abs(right_y) else right_y
+
+            # Horizontal movement: D-pad or left stick
+            if can_move and current_time - last_move_time >= lateral_move_delay:
+                if hat[0] == -1 or axis_x < -AXIS_DEADZONE:
+                    Grid.move(-1, 0)
+                    last_move_time = current_time
+                elif hat[0] == 1 or axis_x > AXIS_DEADZONE:
+                    Grid.move(1, 0)
+                    last_move_time = current_time
+
+            # Soft-drop (down): D-pad down, stick down or B button hold
+            down_active = joystick_down_pressed or (hat[1] == -1) or (axis_y > AXIS_DEADZONE)
+            if down_active and can_move and current_time - last_move_time >= down_move_delay:
+                Grid.move(0, 1)
+                last_move_time = current_time
+                current_time_delay = 25
+
+            # Rotation on up: D-pad up or stick up should rotate once on the edge
+            if can_move:
+                # hat edge
+                if hat[1] == 1 and prev_hat[1] != 1:
+                    Grid.rotate()
+                # axis edge (analog up)
+                if axis_y < -AXIS_DEADZONE and prev_axis_y >= -AXIS_DEADZONE:
+                    Grid.rotate()
+
+            # If down was active last frame but not now, restore timer
+            if prev_down_active and not down_active and not game_pause:
+                current_time_delay = Grid.update_game_speed()
+                pygame.time.set_timer(timer_event, current_time_delay)
+
+            prev_hat = hat
+            prev_axis_y = axis_y
+            prev_down_active = down_active
         #Creacion de figuras
         Grid.draw(screen)
         if game_pause:
